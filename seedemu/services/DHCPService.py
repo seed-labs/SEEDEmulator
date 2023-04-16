@@ -43,8 +43,8 @@ class DHCPServer(Server):
     """!
     @brief The dynamic host configuration protocol server.
     """
-    __node: Node
-    __emulator: Emulator
+    #__node: Node
+    #__emulator: Emulator
     __name_servers: str
     __dhcp_start: int
     __dhcp_end: int
@@ -58,12 +58,16 @@ class DHCPServer(Server):
         self.__name_servers = "#option domain-name-servers none;"
         self.__is_range_changed = False
 
-    def configure(self, node: Node, emulator:Emulator):
+    # Overriding this method may no longer be needed. 
+    # Removed
+    '''
+    def configure(self, node: Node, service: DHCPService, emulator:Emulator):
         """!
         @brief configure the node
         """
-        self.__node = node
-        self.__emulator = emulator
+        #self.__node = node
+        #self.__emulator = emulator
+    '''
 
     def setIpRange(self, dhcpStart:int, dhcpEnd: int) -> DHCPServer:
         """!
@@ -75,17 +79,18 @@ class DHCPServer(Server):
         
         return self
 
-    def install(self, node:Node):
+    def install(self, node:Node, service: Service, emulator: Emulator):
         """!
         @brief Install the service
         """
 
         node.addSoftware('isc-dhcp-server')
 
-        ifaces = self.__node.getInterfaces()
+        #ifaces = self.__node.getInterfaces()
+        ifaces = node.getInterfaces()
         assert len(ifaces) > 0, 'node {} has no interfaces'.format(node.getName())
         
-        reg = self.__emulator.getRegistry()
+        reg = emulator.getRegistry()
         (scope, _, _) = node.getRegistryInfo()
         rif: Interface = None
         hif: Interface = ifaces[0]
@@ -99,7 +104,8 @@ class DHCPServer(Server):
                     rif = riface
                     break
 
-        assert rif != None, 'Host {} in as{} in network {}: no router'.format(self.__node.getname, scope, hnet.getName())
+        #assert rif != None, 'Host {} in as{} in network {}: no router'.format(self.__node.getname, scope, hnet.getName())
+        assert rif != None, 'Host {} in as{} in network {}: no router'.format(node.getname, scope, hnet.getName())
                 
         subnet = hnet.getPrefix().with_netmask.split('/')[0]
         netmask = hnet.getPrefix().with_netmask.split('/')[1]
@@ -115,7 +121,8 @@ class DHCPServer(Server):
         ip_start += "." + ip_address_start
         ip_end += "." + ip_address_end
 
-        nameServers:list = self.__node.getNameServers()
+        #nameServers:list = self.__node.getNameServers()
+        nameServers:list = node.getNameServers()
 
         if len(nameServers) > 0:
             self.__name_servers =  DHCPServiceFileTemplates['dhcpd_conf_dns'].format(name_servers = ", ".join(nameServers))       
@@ -157,11 +164,15 @@ class DHCPService(Service):
         return DHCPServer()
 
 
+    # Avoid overriding this method.
+    # If needed, override _doConfigure(), but it does not seem this is needed here.
+    '''
     def configure(self, emulator: Emulator):
         super().configure(emulator)
         targets = self.getTargets()
         for (server, node) in targets:
             server.configure(node, emulator)
+    '''
 
     def getName(self) -> str:
         return 'DHCPService'
