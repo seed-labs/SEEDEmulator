@@ -32,7 +32,7 @@ class SampleServer(Server):
 
         return 
 
-    def install(self, node:Node, service: Service, emulator: Emulator):
+    def install(self, node: Node, service: Service, emulator: Emulator):
         """!
         @brief Install the service. This method must be implemented. 
 
