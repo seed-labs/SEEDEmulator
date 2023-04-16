@@ -1,18 +1,34 @@
+# This service is not used by any official examples. 
+# It has not been fully tested.
+
 from .DomainNameService import DomainNameService, DomainNameServer
 from seedemu.core import Node, Emulator, Service, Server
 
+
 class ReverseDomainNameServer(Server):
     """!
-    @brief Reverse DNS server.
+    @brief Reverse DNS server. 
     """
 
-    def install(self, node: Node):
+    def install(self, node: Node, service: Service, emulator: Emulator):
+    """
+    @brief Overriding this method is mandatory. 
+    """
         pass
+
 
 class ReverseDomainNameService(Service):
     """!
     @brief Reverse DNS. This service hosts the in-addr.arpa. zone and resolve
-    IP addresses to nodename-netname.nodetype.asn.net
+    IP addresses to nodename-netname.nodetype.asn.net.
+
+    In the current implementation, this is not a real service, 
+    i.e., it does not have its own server. The purpose of 
+    this service (layer) is to modify the zone information 
+    in the DNS service. 
+
+    This is not a recommended practice, because cross-layer modification
+    is not a good idea. 
     """
 
     __dns: DomainNameService
