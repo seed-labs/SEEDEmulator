@@ -339,7 +339,7 @@ class DomainNameServer(Server):
         return rules
 
 
-    def configure(self, node: Node, dns: DomainNameService):
+    def configure(self, node: Node, dns: DomainNameService, emulator: Emulator):
         """!
         @brief configure the node.
         """
@@ -379,7 +379,7 @@ class DomainNameServer(Server):
                 for record in self.__getRealRootRecords():
                     zone.addRecord(record)
 
-    def install(self, node: Node, dns: DomainNameService):
+    def install(self, node: Node, dns: DomainNameService, emulator: Emulator):
         """!
         @brief Handle the installation.
         """
@@ -459,15 +459,15 @@ class DomainNameService(Service):
     def _createServer(self) -> Server:
         return DomainNameServer()
 
-    def _doConfigure(self, node: Node, server: DomainNameServer):
-        server.configure(node, self)
+    def _doConfigure(self, node: Node, server: DomainNameServer, emulator: Emulator):
+        server.configure(node, self, emulator)
 
     def configure(self, emulator: Emulator):
         self.__resolvePendingRecords(emulator, self.__rootZone)
         return super().configure(emulator)
 
-    def _doInstall(self, node: Node, server: DomainNameServer):
-        server.install(node, self)
+    def _doInstall(self, node: Node, server: DomainNameServer, emulator: Emulator):
+        server.install(node, self, emulator)
 
     def getName(self):
         return 'DomainNameService'

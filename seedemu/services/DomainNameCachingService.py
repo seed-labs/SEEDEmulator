@@ -90,10 +90,13 @@ class DomainNameCachingServer(Server, Configurable):
 
         return self
 
-    def configure(self, emulator: Emulator):
+    # After the revision of the Service API, this is no longer needed,
+    # because the emulator instance is added to the APIs. 
+    # We keep it here for now to avoid making too many changes. 
+    def configure(self, node: Node, service: DomainNameCachingService, emulator: Emulator):
         self.__emulator = emulator
 
-    def install(self, node: Node):
+    def install(self, node: Node, service: DomainNameCachingService, emulator: Emulator):
         node.addSoftware('bind9')
         node.setFile('/etc/bind/named.conf.options', DomainNameCachingServiceFileTemplates['named_options'])
         node.setFile('/etc/bind/named.conf.local','')
@@ -168,7 +171,7 @@ class DomainNameCachingService(Service):
 
         targets = self.getTargets()
         for (server, node) in targets:
-            server.configure(emulator)
+            server.configure(node, self, emulator)
 
         if self.__auto_root:
             dns_layer: DomainNameService = emulator.getRegistry().get('seedemu', 'layer', 'DomainNameService')
