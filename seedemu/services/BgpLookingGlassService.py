@@ -1,3 +1,7 @@
+# This service install BGP Looking-glass on BGP routers. 
+# It uses an open-source looking-glass code. 
+# This service has not been tested yet. 
+
 from __future__ import annotations
 from seedemu.core import Node, Service, Server, Emulator, ScopedRegistry
 from seedemu.layers.Routing import Router
@@ -13,7 +17,7 @@ class BgpLookingGlassServer(Server):
     """
 
     __routers: Set[str]
-    __sim: Emulator
+    #__sim: Emulator
     __frontend_port: int
     __proxy_port: int
 
@@ -94,8 +98,6 @@ class BgpLookingGlassServer(Server):
 
         return self
 
-        return self
-
     def getAttached(self) -> Set[str]:
         """!
         @brief get routers to be attached.
@@ -104,6 +106,8 @@ class BgpLookingGlassServer(Server):
         """
         return self.__routers
 
+    # No longer needed 
+    '''
     def bind(self, emulator: Emulator):
         """!
         @brief bind to the given emulator object; this will be called by the
@@ -113,11 +117,12 @@ class BgpLookingGlassServer(Server):
         @param emulator emulator object.
         """
         self.__sim = emulator
+    '''
 
-    def install(self, node: Node):
+    def install(self, node: Node, service: BgpLookingGlassService, emulator: Emulator):
         routers: Dict[str, str] = {}
         asn = node.getAsn()
-        sreg = ScopedRegistry(str(asn), self.__sim.getRegistry())
+        sreg = ScopedRegistry(str(asn), emulator.getRegistry())
 
         self.__installLookingGlass(node)
 
@@ -165,13 +170,19 @@ class BgpLookingGlassService(Service):
     def _createServer(self) -> Server:
         return BgpLookingGlassServer()
 
-    def _doConfigure(self, node: Node, server: BgpLookingGlassServer):
-        super()._doConfigure(node, server)
-        server.bind(self.__emulator)
+    # No longer needed after the API changes in the superclass
+    '''
+    def _doConfigure(self, node: Node, server: BgpLookingGlassServer, emulator: Emulator):
+        super()._doConfigure(node, server, emulator)
+        server.bind(emulator)
+    '''
 
+    # No need after the API changes in the superclass
+    '''
     def configure(self, emulator: Emulator):
         self.__emulator = emulator
         return super().configure(emulator)
+    '''
 
     def getName(self) -> str:
         return 'BgpLookingGlassService'
