@@ -142,7 +142,7 @@ class BotnetServer(Server):
 
         return self
 
-    def install(self, node: Node):
+    def install(self, node: Node, service: BotnetService, emulator: Emulator):
         """!
         @brief Install the Botnet C2 server.
         """
@@ -249,7 +249,7 @@ class BotnetClientServer(Server):
 
         return self
 
-    def install(self, node: Node):
+    def install(self, node: Node, service: BotnetService, emulator: Emulator):
         assert self.__server != None or self.__dga != None, 'botnet-client on as{}/{} has no server configured!'.format(node.getAsn(), node.getName())
 
         # get byob dependencies.
@@ -320,7 +320,7 @@ class BotnetClientService(Service):
         super().__init__()
         self.addDependency('Base', False, False)
 
-    def _doConfigure(self, node: Node, server: Server):
+    def _doConfigure(self, node: Node, server: Server, emulator: Emulator):
         server.useBindingFrom(self.__emulator)
 
     def configure(self, emulator: Emulator):
