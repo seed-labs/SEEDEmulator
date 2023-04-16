@@ -59,7 +59,7 @@ class WebServer(Server):
 
         return self
     
-    def install(self, node: Node):
+    def install(self, node: Node, service: WebService, emulator: Emulator):
         """!
         @brief Install the service.
         """
