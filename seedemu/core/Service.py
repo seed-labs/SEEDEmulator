@@ -16,19 +16,36 @@ class Server(Printable):
     """
     __class_names: list
     _base_system: BaseSystem
+
     def __init__(self):
         super().__init__()
         self.__class_names = []
         self._base_system = BaseSystem.DEFAULT
 
-    def install(self, node: Node):
+
+    def configure(self, node: Node, service: Service, emulator: Emulator):
         """!
-        @brief Install the server on node.
+        @brief Configure the server. Currently, it does nothing. If configuration
+        is needed in the subclass server, this method should be overridden.
 
         @param node node.
+        @param service service.
+        @param emulator emulator.
+        """
+        return 
+
+
+    def install(self, node: Node, service: Service, emulator: Emulator):
+        """!
+        @brief Install the server on node. Subclass server needs to implement it.
+
+        @param node node.
+        @param service service.
+        @param emulator emulator.
         """
         raise NotImplementedError('install not implemented')
     
+
     def setBaseSystem(self, base_system: BaseSystem) -> Server:
         """!
         @brief Set a base_system of a server.
@@ -86,15 +103,16 @@ class Service(Layer):
         """
         raise NotImplementedError('_createServer not implemented')
 
-    def _doInstall(self, node: Node, server: Server):
+    def _doInstall(self, node: Node, server: Server, emulator: Emulator):
         """!
         @brief install the server on node. This can be overridden by service
-        implementations.
+        implementations if something needs to be done at the service level.
 
         @param node node.
         @param server server.
+        @param emulator emulator.
         """
-        server.install(node)
+        server.install(node, self, emulator)
 
     def _doSetClassNames(self, node:Node, server:Server) -> Node:
         """!
@@ -105,24 +123,27 @@ class Service(Layer):
         """
         server.setClassNames(node)
 
-    def _doConfigure(self, node: Node, server: Server):
+    def _doConfigure(self, node: Node, server: Server, emulator: Emulator):
         """!
-        @brief configure the node. Some services may need to by configure before
-        rendered.
+        @brief configure the node. Some services may need to be configured before
+        they are rendered.
 
-        This is currently used by the DNS layer to configure NS and gules
+        For example, this is used by the DNS service to configure NS and glue
         records before the actual installation.
         
         @param node node
         @param server server
+        @param emulator the emulator instance
         """
+        server.configure(node, self, emulator)
         return
 
-    def __configureServer(self, server: Server, node: Node):
+    def __configureServer(self, server: Server, node: Node, emulator: Emulator):
         """!
         @brief Configure the service on given node.
 
         @param node node to configure the service on.
+        @param emulator the emulator instance.
 
         @throws AssertionError if node is not host node.
         """
@@ -142,7 +163,7 @@ class Service(Layer):
 
         node.setBaseSystem(server.getBaseSystem())
         
-        self._doConfigure(node, server)
+        self._doConfigure(node, server, emulator)
         self.__targets.add((server, node))
 
     def addPrefix(self, prefix: str):
@@ -172,12 +193,12 @@ class Service(Layer):
         for (vnode, server) in self._pending_targets.items():
             pnode = emulator.getBindingFor(vnode)
             self._log('looking for binding for {}...'.format(vnode))
-            self.__configureServer(server, pnode)
+            self.__configureServer(server, pnode, emulator)
             self._log('configure: bound {} to as{}/{}.'.format(vnode, pnode.getAsn(), pnode.getName()))
     
     def render(self, emulator: Emulator):
         for (server, node) in self.__targets:
-            self._doInstall(node, server)
+            self._doInstall(node, server, emulator)
             for className in server.getClassNames():
                 node.appendClassName(className)
         
