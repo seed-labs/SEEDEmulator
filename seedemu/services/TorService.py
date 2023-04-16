@@ -370,7 +370,7 @@ class TorServer(Server):
 
         return self
 
-    def configure(self, node: Node, tor: 'TorService'):
+    def configure(self, node: Node, tor: TorService, emulator: Emulator):
         """!
         @brief configure TorServer node
 
@@ -391,7 +391,7 @@ class TorServer(Server):
             node.appendStartCommand("export TOR_HS_ADDR={}".format(addr))
             node.appendStartCommand("export TOR_HS_PORT={}".format(port))
 
-    def install(self, node: Node, tor: 'TorService'):
+    def install(self, node: Node, tor: TorService, emulator: Emulator):
         """!
         @brief Tor server installation step.
 
@@ -445,8 +445,8 @@ class TorService(Service):
     def getName(self):
         return 'TorService'
 
-    def _doConfigure(self, node: Node, server: TorServer):
-        server.configure(node, self)
+    def _doConfigure(self, node: Node, server: TorServer, emulator: Emulator):
+        server.configure(node, self, emulator)
 
     def addDirAuthority(self, addr: str) -> TorService:
         """!
@@ -487,8 +487,8 @@ class TorService(Service):
         self.__resolveHSLink(emulator)
         return super().configure(emulator)
 
-    def _doInstall(self, node: Node, server: TorServer):
-        server.install(node, self)
+    def _doInstall(self, node: Node, server: TorServer, emulator: Emulator):
+        server.install(node, self, emulator)
 
     def _createServer(self) -> Server:
         return TorServer()
