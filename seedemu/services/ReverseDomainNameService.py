@@ -11,9 +11,9 @@ class ReverseDomainNameServer(Server):
     """
 
     def install(self, node: Node, service: Service, emulator: Emulator):
-    """
-    @brief Overriding this method is mandatory. 
-    """
+        """
+        @brief Overriding this method is mandatory. 
+        """
         pass
 
 
