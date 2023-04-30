@@ -11,3 +11,4 @@ from .DHCPService import DHCPServer, DHCPService
 from .EthereumService import *
 from .ScionBwtestService import ScionBwtestService
 from .SampleService import SampleService, SampleServer
+from .VPNService import VPNService, VPNServer
