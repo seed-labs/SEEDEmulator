@@ -96,6 +96,14 @@ ip -j addr | jq -cr '.[]' | while read -r iface; do {
 }; done
 '''
 
+DockerCompilerFileTemplates['dockerbridge'] ="""\
+    {name}:
+        ipam:
+          config:
+            - subnet:  {snet}
+"""
+
+
 DockerCompilerFileTemplates['compose'] = """\
 version: "3.4"
 services:
@@ -103,6 +111,8 @@ services:
 {services}
 networks:
 {networks}
+volumes:
+{named_volumes}
 """
 
 DockerCompilerFileTemplates['compose_dummy'] = """\
@@ -136,6 +146,8 @@ DockerCompilerFileTemplates['compose_service'] = """\
 {networks}{ports}{volumes}
         labels:
 {labelList}
+        environment:
+        {environment}
 """
 
 DockerCompilerFileTemplates['compose_label_meta'] = """\
@@ -163,7 +175,7 @@ DockerCompilerFileTemplates['compose_volume'] = """\
 """
 
 DockerCompilerFileTemplates['compose_storage'] = """\
-            - {nodePath}
+            - {volume_name}:{nodePath}
 """
 
 DockerCompilerFileTemplates['compose_service_network'] = """\
@@ -322,6 +334,8 @@ class Docker(Compiler):
 
     __basesystem_dockerimage_mapping: dict
 
+    __named_volumes: List[str]
+
     def __init__(
         self,
         platform:Platform = Platform.AMD64,
@@ -389,9 +403,10 @@ class Docker(Compiler):
         self.__image_per_node_list = {}
 
         self.__platform = platform
+        self.__named_volumes = []
 
         self.__basesystem_dockerimage_mapping = BASESYSTEM_DOCKERIMAGE_MAPPING_PER_PLATFORM[self.__platform]
-        
+                
         for name, image in self.__basesystem_dockerimage_mapping.items():
             priority = 0
             if name == BaseSystem.DEFAULT:
@@ -853,6 +868,7 @@ class Docker(Compiler):
                 netId = real_netname,
                 address = address
             )
+        node_nets += '\n'.join(node.getCustomNets())
 
         _ports = node.getPorts()
         ports = ''
@@ -882,16 +898,31 @@ class Docker(Compiler):
                     nodePath = nodePath
                 )
 
-            for path in storages:
+            for path,vname in storages:
+                self.__named_volumes.append(vname)
                 lst += DockerCompilerFileTemplates['compose_storage'].format(
-                    nodePath = path
+                    nodePath = path,
+                    volume_name= "{}".format(vname)
                 )
 
             volumes = DockerCompilerFileTemplates['compose_volumes'].format(
                 volumeList = lst
             )
 
+        name = self.__naming_scheme.format(
+            asn = node.getAsn(),
+            role = self._nodeRoleToString(node.getRole()),
+            name = node.getName(),
+            displayName = node.getDisplayName() if node.getDisplayName() != None else node.getName(),
+            primaryIp = node.getInterfaces()[0].getAddress()
+        )
+
+        name = sub(r'[^a-zA-Z0-9_.-]', '_', name)
+
         dockerfile = DockerCompilerFileTemplates['dockerfile']
+
+        dockerfile += 'ENV CONTAINER_NAME {}\n'.format(name)
+
         mkdir(real_nodename)
         chdir(real_nodename)
 
@@ -912,6 +943,7 @@ class Docker(Compiler):
         dockerfile = 'FROM {}\n'.format(md5(image.getName().encode('utf-8')).hexdigest()) + dockerfile
         self._used_images.add(image.getName())
 
+        for cmd in node.getDockerCommands(): dockerfile += '{}\n'.format(cmd)
         for cmd in node.getBuildCommands(): dockerfile += 'RUN {}\n'.format(cmd)
 
         start_commands = ''
@@ -945,19 +977,9 @@ class Docker(Compiler):
             dockerfile += self._importFile(cpath, hpath)
 
         dockerfile += 'CMD ["/start.sh"]\n'
+
         print(dockerfile, file=open('Dockerfile', 'w'))
-
         chdir('..')
-
-        name = self.__naming_scheme.format(
-            asn = node.getAsn(),
-            role = self._nodeRoleToString(node.getRole()),
-            name = node.getName(),
-            displayName = node.getDisplayName() if node.getDisplayName() != None else node.getName(),
-            primaryIp = node.getInterfaces()[0].getAddress()
-        )
-
-        name = sub(r'[^a-zA-Z0-9_.-]', '_', name)
 
         return DockerCompilerFileTemplates['compose_service'].format(
             nodeId = real_nodename,
@@ -967,7 +989,8 @@ class Docker(Compiler):
             # privileged = 'true' if node.isPrivileged() else 'false',
             ports = ports,
             labelList = self._getNodeMeta(node),
-            volumes = volumes
+            volumes = volumes,
+            environment= "    - CONTAINER_NAME={}\n            ".format(name) + '\n            '.join(node.getCustomEnv())
         )
 
     def _compileNet(self, net: Network) -> str:
@@ -1088,9 +1111,15 @@ class Docker(Compiler):
                 dirName = image.getDirName()
             )
 
+        bridges = registry.getByType('global','dockerbridge')
+        for b in bridges:
+            id = b.getAttribute('id')
+            self.__networks += DockerCompilerFileTemplates['dockerbridge'].format(name = b.getAttribute('name'), snet= str( b.getSubnet() ) )
+
         self._log('creating docker-compose.yml...'.format(scope, name))
         print(DockerCompilerFileTemplates['compose'].format(
             services = self.__services,
             networks = self.__networks,
+            named_volumes= '\n'.join(   map(lambda name:  "    {}:".format(name) ,self.__named_volumes )),
             dummies = local_images + self._makeDummies()
         ), file=open('docker-compose.yml', 'w'))
